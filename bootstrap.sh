@@ -66,11 +66,17 @@ install_base_packages() {
     # Python
     python3 python3-pip python3-virtualenv pipx
 
+    # Node.js (needed for some Neovim tooling)
+    nodejs npm
+
     # graphics / debug sanity tools
     mesa-demos vulkan-tools
 
     # utilities
     htop btop fastfetch wl-clipboard xclip direnv stow ShellCheck
+
+    # fonts / terminal icons
+    cascadia-code-nf-fonts
 
     # misc dev niceties
     sqlite just
@@ -107,6 +113,35 @@ setup_git_lfs() {
   git lfs install --skip-repo || true
 }
 
+install_neovim_python_provider() {
+  log "Installing pynvim for Neovim Python provider"
+  python3 -m pip install --user --upgrade pynvim
+}
+
+install_neovim_node_provider() {
+  log "Ensuring Neovim Node.js provider is installed"
+
+  if npm list -g neovim --depth=0 >/dev/null 2>&1; then
+    log "Neovim Node.js provider already installed globally"
+    return
+  fi
+
+  if npm config get prefix 2>/dev/null | grep -q '^/usr'; then
+    log "Global npm prefix is system-owned; installing Neovim Node.js provider in user prefix"
+    mkdir -p "$HOME/.local"
+    npm config set prefix "$HOME/.local"
+  fi
+
+  npm install -g neovim
+}
+
+refresh_font_cache() {
+  if command -v fc-cache >/dev/null 2>&1; then
+    log "Refreshing font cache"
+    fc-cache -fv >/dev/null
+  fi
+}
+
 print_next_steps() {
   cat <<'EOF'
 
@@ -119,12 +154,16 @@ Next suggested steps for the dotfiles repo:
          git/
   2. Add a bootstrap README with exact first-run instructions.
   3. Add a packages list file to avoid one giant script.
-  4. Add optional extras later (Steam, podman, fonts, GUI apps, etc).
+  4. Add optional extras later (Steam, podman, more fonts, GUI apps, etc).
 
 Manual checks:
   - nvim --version
   - fish --version
   - git lfs version
+  - python3 -c "import pynvim; print(pynvim.__version__)"
+  - npm config get prefix
+  - npm list -g neovim --depth=0
+  - fc-list | grep -i "Cascadia.*NF"
   - glxinfo | grep "OpenGL renderer"
   - vulkaninfo | grep deviceName
   - nvidia-smi
@@ -141,9 +180,13 @@ main() {
   install_nvidia_utils
   configure_fish_as_default_shell
   setup_git_lfs
+  install_neovim_python_provider
+  install_neovim_node_provider
+  refresh_font_cache
   print_next_steps
 
   log "Bootstrap complete"
 }
 
 main "$@"
+

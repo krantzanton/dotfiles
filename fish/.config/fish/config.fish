@@ -13,3 +13,5 @@ set -g fish_greeting ""
 
 # Path additions (example)
 # set -gx PATH $HOME/.local/bin $PATH
+
+fish_add_path $HOME/.local/opt/cmake/bin
