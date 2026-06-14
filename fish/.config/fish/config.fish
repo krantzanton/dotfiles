@@ -3,7 +3,6 @@
 # Aliases
 alias ls="eza --icons"
 alias ll="eza -lah --icons"
-alias cat="bat"
 
 # Environment
 set -gx EDITOR nvim
