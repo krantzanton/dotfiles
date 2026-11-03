@@ -15,12 +15,19 @@ backup_if_exists() {
 
 # Handle known conflicts (start minimal, expand later)
 backup_if_exists "$HOME/.config/fish/config.fish"
+backup_if_exists "$HOME/.config/kitty/kitty.conf"
+backup_if_exists "$HOME/.config/tmux/tmux.conf"
+backup_if_exists "$HOME/.tmux.conf"
+backup_if_exists "$HOME/.zshrc"
 
 packages=(
   fish
+  zsh
   git
   nvim
   tmux
+  kitty
+  ghostty
 )
 
 for pkg in "${packages[@]}"; do
