@@ -32,7 +32,8 @@ It asks for your sudo password once, and is safe to re-run. It:
   official downloads into `~/.local/opt` (linked into `~/.local/bin`). The apt versions are too
   old: Ubuntu 24.04 ships Neovim 0.9, and this config needs 0.11+. Also links `fdfind` → `fd`
   and `batcat` → `bat`.
-- installs [yazi](https://github.com/sxyazi/yazi) (file manager) into `~/.local/bin`
+- installs [yazi](https://github.com/sxyazi/yazi) (file manager, `<leader>-` in nvim) and
+  [lazygit](https://github.com/jesseduffield/lazygit) (git UI, `<leader>lg` in nvim) into `~/.local/bin`
 - installs the **Cascadia Code NF** font kitty uses (into `~/.local/share/fonts` on Ubuntu)
 - installs NVIDIA drivers **only if an NVIDIA GPU is detected** (`ubuntu-drivers install` on
   Ubuntu, `akmod-nvidia` on Fedora)
@@ -47,9 +48,9 @@ Options:
 | `--no-chsh`    | keep your current default shell |
 | `--nvidia`     | install NVIDIA drivers even if no GPU is detected |
 | `--no-nvidia`  | never install NVIDIA drivers |
-| `--no-extras`  | skip yazi and the font |
+| `--no-extras`  | skip yazi, lazygit and the font |
 | `--ghostty`    | also install ghostty (snap on Ubuntu, COPR on Fedora) |
-| `--update`     | reinstall Neovim / yazi / font from upstream even if present (Go and Node always update to latest) |
+| `--update`     | reinstall Neovim / yazi / lazygit / font from upstream even if present (Go and Node always update to latest) |
 
 To add a package, put it in `APT_PACKAGES` and/or `DNF_PACKAGES` at the top of `bootstrap.sh`.
 On Ubuntu, packages apt doesn't have are skipped with a warning instead of failing the run
@@ -137,7 +138,7 @@ git pull
 ./scripts/stow_all.sh         # picks up any new files
 ```
 
-On Ubuntu, `./bootstrap.sh --update` also pulls the latest Neovim and yazi.
+On Ubuntu, `./bootstrap.sh --update` also pulls the latest Neovim, yazi and lazygit.
 
 In nvim: `:Lazy sync` for plugins, `:MasonUpdate` for tools, `:TSUpdate` for parsers.
 Plugin versions are pinned in `nvim/.config/nvim/lazy-lock.json`, commit it after updating.
@@ -172,7 +173,7 @@ Wayland (the default on Ubuntu 24.04 and Fedora).
 - `gd` / `gr` / `gi` / `gy` / `K` LSP navigation, `<leader>rn` rename, `<leader>ca` code action
 - `<leader>cf` format (also on save; `:FormatToggle`), `<leader>ch` inlay hints
 - `<leader>x…` Trouble diagnostics list, `]d` / `[d` next/prev diagnostic
-- `<leader>g…` git hunks, `]h` / `[h` next/prev hunk
+- `<leader>g…` git hunks, `]h` / `[h` next/prev hunk, `<leader>lg` lazygit
 - `<leader>db` breakpoint, `F5` debug, `<leader>dt` debug Go test
 - `-` oil file explorer, `<leader>-` yazi
 - `sa` / `sd` / `sr` add/delete/replace surroundings

@@ -11,7 +11,7 @@ set -euo pipefail
 #   --no-chsh      don't make fish the default shell
 #   --nvidia       install NVIDIA drivers/utils even if no NVIDIA GPU is detected
 #   --no-nvidia    never install NVIDIA drivers/utils
-#   --no-extras    skip yazi and the Cascadia Code NF font
+#   --no-extras    skip yazi, lazygit and the Cascadia Code NF font
 #   --ghostty      also install the ghostty terminal
 #   --update       reinstall tools from upstream even if already installed
 #   -h, --help     show this help
@@ -141,8 +141,8 @@ detect_distro() {
 
 detect_arch() {
   case "$(uname -m)" in
-    x86_64) ARCH_GO=amd64 ARCH_NODE=x64 ARCH_NVIM=x86_64 ARCH_RUST=x86_64 ;;
-    aarch64 | arm64) ARCH_GO=arm64 ARCH_NODE=arm64 ARCH_NVIM=arm64 ARCH_RUST=aarch64 ;;
+    x86_64) ARCH_GO=amd64 ARCH_NODE=x64 ARCH_NVIM=x86_64 ARCH_RUST=x86_64 ARCH_LAZYGIT=x86_64 ;;
+    aarch64 | arm64) ARCH_GO=arm64 ARCH_NODE=arm64 ARCH_NVIM=arm64 ARCH_RUST=aarch64 ARCH_LAZYGIT=arm64 ;;
     *) die "unsupported CPU architecture: $(uname -m)" ;;
   esac
 }
@@ -295,6 +295,22 @@ install_yazi() {
   install -m 755 "$TMP_DIR/$name/yazi" "$TMP_DIR/$name/ya" "$LOCAL_BIN/"
 }
 
+# lazygit: git TUI, opened with <leader>lg in nvim. Not in Ubuntu 24.04's apt.
+install_lazygit() {
+  if have lazygit && ((!FORCE_UPDATE)); then
+    log "lazygit already installed"
+    return
+  fi
+  local version
+  version="$(fetch https://api.github.com/repos/jesseduffield/lazygit/releases/latest | jq -r .tag_name)"
+  [[ $version == v* ]] || { warn "couldn't find the latest lazygit release; skipping"; return; }
+  log "Installing lazygit $version into $LOCAL_BIN"
+  fetch "https://github.com/jesseduffield/lazygit/releases/download/${version}/lazygit_${version#v}_Linux_${ARCH_LAZYGIT}.tar.gz" |
+    tar -xz -C "$TMP_DIR" lazygit
+  mkdir -p "$LOCAL_BIN"
+  install -m 755 "$TMP_DIR/lazygit" "$LOCAL_BIN/"
+}
+
 # kitty uses "Cascadia Code NF". Fedora has a package; elsewhere grab Microsoft's release.
 install_cascadia_font() {
   if fc-list | grep -qi 'Cascadia Code NF' && ((!FORCE_UPDATE)); then
@@ -317,6 +333,7 @@ install_cascadia_font() {
 install_extras() {
   ((DO_EXTRAS)) || return 0
   install_yazi
+  install_lazygit
   install_cascadia_font
 }
 
