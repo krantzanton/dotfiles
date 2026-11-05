@@ -1,7 +1,7 @@
 # dotfiles
 all my dotfiles (or my attempt at it)
 
-Configs for fish, zsh, kitty, ghostty, tmux and Neovim, symlinked into `$HOME` with
+Configs for fish, zsh, kitty, ghostty, tmux, Neovim and Claude Code, symlinked into `$HOME` with
 [GNU stow](https://www.gnu.org/software/stow/).
 
 **Works on Ubuntu 24.04 LTS** (main target) and Fedora 41+. `bootstrap.sh` detects which
@@ -37,6 +37,7 @@ It asks for your sudo password once, and is safe to re-run. It:
 - installs the **Cascadia Code NF** font kitty uses (into `~/.local/share/fonts` on Ubuntu)
 - installs NVIDIA drivers **only if an NVIDIA GPU is detected** (`ubuntu-drivers install` on
   Ubuntu, `akmod-nvidia` on Fedora)
+- installs [Claude Code](https://code.claude.com) (AI coding agent) into `~/.local/bin`
 - makes fish the default shell
 - enables Git LFS, installs the Neovim Python and Node providers
 
@@ -49,6 +50,7 @@ Options:
 | `--nvidia`     | install NVIDIA drivers even if no GPU is detected |
 | `--no-nvidia`  | never install NVIDIA drivers |
 | `--no-extras`  | skip yazi, lazygit and the font |
+| `--no-claude`  | don't install Claude Code |
 | `--ghostty`    | also install ghostty (snap on Ubuntu, COPR on Fedora) |
 | `--update`     | reinstall Neovim / yazi / lazygit / font from upstream even if present (Go and Node always update to latest) |
 
@@ -67,7 +69,7 @@ On Ubuntu, packages apt doesn't have are skipped with a warning instead of faili
 | python         | python3, pip, venv, pipx, pynvim |
 | node / go      | upstream on Ubuntu (see above), distro packages on Fedora |
 | graphics       | glxinfo (mesa-utils / mesa-demos), vulkan-tools |
-| utilities      | htop, btop, fastfetch, wl-clipboard, xclip, direnv, stow, shellcheck |
+| utilities      | htop, btop, fastfetch, wl-clipboard, xclip, direnv, stow, shellcheck, notify-send |
 | misc           | sqlite, just |
 
 </details>
@@ -78,7 +80,9 @@ On Ubuntu, packages apt doesn't have are skipped with a warning instead of faili
 ./scripts/stow_all.sh
 ```
 
-Runs `stow` for each package folder (`fish`, `zsh`, `nvim`, `tmux`, `kitty`, `ghostty`) into `$HOME`.
+Runs `stow` for each package folder (`fish`, `zsh`, `nvim`, `tmux`, `kitty`, `ghostty`, `claude`) into `$HOME`.
+It also adds the Claude Code hooks from `scripts/claude-settings.json` to `~/.claude/settings.json`
+(merged with `jq`, keeping your existing settings; safe to re-run).
 Existing files that would conflict (`config.fish`, `kitty.conf`, `tmux.conf`, `~/.tmux.conf`,
 `~/.zshrc`) are moved to `<file>.bak` first.
 
@@ -147,12 +151,13 @@ Plugin versions are pinned in `nvim/.config/nvim/lazy-lock.json`, commit it afte
 
 | package  | what                                                               |
 |----------|--------------------------------------------------------------------|
-| fish     | default shell                                                      |
+| fish     | default shell: git prompt, fzf, `z`, abbreviations, `y`, `wt`      |
 | zsh      | alternative shell: no framework, git prompt, fzf, zoxide, autosuggest |
 | kitty    | terminal, oxocarbon, starts inside tmux                             |
 | ghostty  | terminal                                                           |
 | tmux     | prefix `C-a`, oxocarbon status bar, no plugin manager              |
 | nvim     | lazy.nvim, LSP via Mason (Go, TS/React, C/C++, Lua, ...)           |
+| claude   | `~/.claude/CLAUDE.md` (personal preferences) + tmux status hook    |
 
 Each folder mirrors where its files go under `$HOME`, e.g. `nvim/.config/nvim/init.lua` →
 `~/.config/nvim/init.lua`.
@@ -161,12 +166,47 @@ Kitty opens straight into a tmux session called `main` (a new session if `main` 
 already attached somewhere else). tmux copies to the clipboard with `wl-copy`, so it expects
 Wayland (the default on Ubuntu 24.04 and Fedora).
 
+## AI workflow (Claude Code)
+
+The setup: nvim on the left, Claude on the right (`<prefix> a`), lazygit to review (`<prefix> g`).
+When Claude finishes or needs permission, its tmux window gets a pink **●** and, if you're
+looking at another window, a desktop notification.
+
+Habits that make it work:
+
+1. **Commit before each task.** Then `git diff` shows exactly what the agent did, and
+   `git restore .` undoes all of it.
+2. **Small, specific tasks**: name the file, the expected behaviour, and how to check it.
+3. **Plan first for anything bigger**: `Shift+Tab` switches to plan mode (reads code, proposes
+   steps, changes nothing).
+4. **Review every diff** in lazygit (`<prefix> g`) before committing.
+5. **Let it check itself**: tell it which tests / linter / build to run.
+6. **`/init`** in a repo writes a project `CLAUDE.md`; keep adding to it. Personal preferences
+   for every project are in `claude/.claude/CLAUDE.md`.
+7. **`/clear`** between unrelated tasks.
+
+**Parallel agents:** give each one its own checkout with `wt` (fish):
+
+```fish
+wt fix-login        # creates ../<repo>-fix-login on branch fix-login and cd's into it
+claude              # or <prefix> A for a new tmux window
+wt                  # list worktrees
+wt rm fix-login     # remove it when merged (the branch is kept)
+```
+
 ## Keys worth remembering
 
 **tmux** (prefix `C-a`)
 - `|` / `-` split, `c` new window, `M-1..5` jump to window, `r` reload
 - `C-h/j/k/l` move between tmux panes *and* nvim splits (no prefix)
+- `a` Claude in a split on the right, `A` Claude in a new window, `g` lazygit pop-up
 - `v` copy mode, `v` select, `y` copy to clipboard; `C-a C-l` clears the screen
+
+**fish**
+- abbreviations: `g` git, `gs` status, `gd` diff, `gl` log graph, `v` nvim, `ta` attach tmux
+- `Ctrl-r` history, `Ctrl-t` files, `Alt-c` cd (fzf); `z <dir>` jump to a visited folder
+- `y` yazi (cd on quit), `wt` git worktrees
+- machine-specific settings go in `~/.config/fish/config.local.fish` (not in git)
 
 **nvim** (leader `Space`, press it and wait for which-key)
 - `<leader>f…` find: `ff` files, `fw` grep, `fr` recent, `fs` symbols, `ft` TODOs

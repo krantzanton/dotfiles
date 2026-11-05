@@ -12,6 +12,7 @@ set -euo pipefail
 #   --nvidia       install NVIDIA drivers/utils even if no NVIDIA GPU is detected
 #   --no-nvidia    never install NVIDIA drivers/utils
 #   --no-extras    skip yazi, lazygit and the Cascadia Code NF font
+#   --no-claude    don't install Claude Code
 #   --ghostty      also install the ghostty terminal
 #   --update       reinstall tools from upstream even if already installed
 #   -h, --help     show this help
@@ -42,6 +43,7 @@ APT_PACKAGES=(
 
   # utilities
   htop btop fastfetch wl-clipboard xclip direnv stow shellcheck pciutils fontconfig
+  libnotify-bin # notify-send, used by the Claude Code hook
 
   # misc dev niceties
   sqlite3 just
@@ -70,6 +72,7 @@ DNF_PACKAGES=(
 
   # utilities
   htop btop fastfetch wl-clipboard xclip direnv stow ShellCheck pciutils fontconfig
+  libnotify # notify-send, used by the Claude Code hook
 
   # fonts / terminal icons
   cascadia-code-nf-fonts
@@ -84,10 +87,11 @@ DO_UPGRADE=1
 DO_CHSH=1
 DO_NVIDIA=auto
 DO_EXTRAS=1
+DO_CLAUDE=1
 WITH_GHOSTTY=0
 FORCE_UPDATE=0
 
-usage() { sed -n '4,18p' "$0" | sed 's/^# \{0,1\}//'; }
+usage() { sed -n '4,19p' "$0" | sed 's/^# \{0,1\}//'; }
 
 while (($#)); do
   case "$1" in
@@ -96,6 +100,7 @@ while (($#)); do
     --nvidia) DO_NVIDIA=1 ;;
     --no-nvidia) DO_NVIDIA=0 ;;
     --no-extras) DO_EXTRAS=0 ;;
+    --no-claude) DO_CLAUDE=0 ;;
     --ghostty) WITH_GHOSTTY=1 ;;
     --update) FORCE_UPDATE=1 ;;
     -h | --help) usage; exit 0 ;;
@@ -359,6 +364,18 @@ install_ghostty() {
   esac
 }
 
+# Claude Code (AI coding agent), official native installer -> ~/.local/bin/claude.
+# It updates itself after that.
+install_claude_code() {
+  ((DO_CLAUDE)) || return 0
+  if have claude; then
+    log "Claude Code already installed ($(claude --version 2>/dev/null | head -1))"
+    return
+  fi
+  log "Installing Claude Code"
+  fetch https://claude.ai/install.sh | bash || warn "Claude Code install failed; see https://code.claude.com/docs"
+}
+
 # --- NVIDIA -----------------------------------------------------------------
 
 install_nvidia() {
@@ -425,11 +442,13 @@ Next steps:
   1. ./scripts/stow_all.sh     symlink the configs into $HOME
   2. log out and back in       picks up the new default shell + PATH
   3. nvim                      first launch installs plugins + language servers
+  4. claude                    log in once; then <prefix> a in tmux opens it beside nvim
 
 Quick checks:
   nvim --version     (should be 0.11 or newer)
   go version
   node --version
+  claude --version
   fc-list | grep -i "Cascadia Code NF"
 EOF
 }
@@ -446,6 +465,7 @@ main() {
   install_upstream_tools
   install_extras
   install_ghostty
+  install_claude_code
   install_nvidia
   configure_fish_as_default_shell
   setup_git_lfs
