@@ -11,7 +11,7 @@ set -euo pipefail
 #   --no-chsh      don't make fish the default shell
 #   --nvidia       install NVIDIA drivers/utils even if no NVIDIA GPU is detected
 #   --no-nvidia    never install NVIDIA drivers/utils
-#   --no-extras    skip yazi, lazygit and the Cascadia Code NF font
+#   --no-extras    skip yazi, lazygit and the fonts (JetBrainsMono Nerd Font, Cascadia Code NF)
 #   --no-claude    don't install Claude Code
 #   --ghostty      also install the ghostty terminal
 #   --update       reinstall tools from upstream even if already installed
@@ -317,7 +317,23 @@ install_lazygit() {
   install -m 755 "$TMP_DIR/lazygit" "$LOCAL_BIN/"
 }
 
-# kitty uses "Cascadia Code NF". Fedora has a package; elsewhere grab Microsoft's release.
+# kitty uses "JetBrainsMono Nerd Font": JetBrains Mono (Ghostty's built-in default) plus the
+# Nerd Font icons. Same release on both distros, from github.com/ryanoasis/nerd-fonts.
+install_jetbrains_font() {
+  if fc-list | grep -qi 'JetBrainsMono Nerd Font' && ((!FORCE_UPDATE)); then
+    log "JetBrainsMono Nerd Font already installed"
+    return
+  fi
+  log "Installing JetBrainsMono Nerd Font into $FONT_DIR"
+  mkdir -p "$FONT_DIR/JetBrainsMono"
+  fetch "https://github.com/ryanoasis/nerd-fonts/releases/latest/download/JetBrainsMono.tar.xz" |
+    tar -xJ -C "$FONT_DIR/JetBrainsMono" --wildcards 'JetBrainsMonoNerdFont-*.ttf' ||
+    { warn "couldn't download JetBrainsMono Nerd Font; skipping"; return; }
+  fc-cache -f >/dev/null
+}
+
+# Cascadia Code NF (kitty's previous font, kept as an alternative). Fedora has a package;
+# elsewhere grab Microsoft's release.
 install_cascadia_font() {
   if fc-list | grep -qi 'Cascadia Code NF' && ((!FORCE_UPDATE)); then
     log "Cascadia Code NF font already installed"
@@ -340,6 +356,7 @@ install_extras() {
   ((DO_EXTRAS)) || return 0
   install_yazi
   install_lazygit
+  install_jetbrains_font
   install_cascadia_font
 }
 
@@ -450,7 +467,7 @@ Quick checks:
   go version
   node --version
   claude --version
-  fc-list | grep -i "Cascadia Code NF"
+  fc-list | grep -i "JetBrainsMono Nerd Font"
 EOF
 }
 

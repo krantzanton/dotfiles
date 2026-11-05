@@ -34,7 +34,8 @@ It asks for your sudo password once, and is safe to re-run. It:
   `fdfind` → `fd` and `batcat` → `bat`.
 - installs [yazi](https://github.com/sxyazi/yazi) (file manager, `<leader>-` in nvim) and
   [lazygit](https://github.com/jesseduffield/lazygit) (git UI, `<leader>gg` in nvim) into `~/.local/bin`
-- installs the **Cascadia Code NF** font kitty uses (into `~/.local/share/fonts` on Ubuntu)
+- installs **JetBrainsMono Nerd Font** (the font kitty uses; same as Ghostty's built-in default, plus icons)
+  and Cascadia Code NF into `~/.local/share/fonts`
 - installs NVIDIA drivers **only if an NVIDIA GPU is detected** (`ubuntu-drivers install` on
   Ubuntu, `akmod-nvidia` on Fedora)
 - installs [Claude Code](https://code.claude.com) (AI coding agent) into `~/.local/bin`
@@ -49,10 +50,10 @@ Options:
 | `--no-chsh`    | keep your current default shell |
 | `--nvidia`     | install NVIDIA drivers even if no GPU is detected |
 | `--no-nvidia`  | never install NVIDIA drivers |
-| `--no-extras`  | skip yazi, lazygit and the font |
+| `--no-extras`  | skip yazi, lazygit and the fonts |
 | `--no-claude`  | don't install Claude Code |
 | `--ghostty`    | also install ghostty (snap on Ubuntu, COPR on Fedora) |
-| `--update`     | reinstall Neovim / yazi / lazygit / font from upstream even if present (Go and Node always update to latest) |
+| `--update`     | reinstall Neovim / yazi / lazygit / fonts from upstream even if present (Go and Node always update to latest) |
 
 To add a package, put it in `APT_PACKAGES` and/or `DNF_PACKAGES` at the top of `bootstrap.sh`.
 On Ubuntu, packages apt doesn't have are skipped with a warning instead of failing the run
@@ -128,7 +129,7 @@ go version
 node --version
 fish --version
 tmux -V
-fc-list | grep -i "Cascadia Code NF" # font kitty uses
+fc-list | grep -i "JetBrainsMono Nerd" # font kitty uses
 glxinfo | grep "OpenGL renderer"
 nvidia-smi                           # NVIDIA only
 ```
