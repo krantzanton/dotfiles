@@ -8,8 +8,9 @@ set -gx PAGER less
 set -gx MANPAGER "nvim +Man!"
 set -gx GOPATH $HOME/go
 
-# ~/.local/bin has nvim/go/node/claude on Ubuntu, see bootstrap.sh
-fish_add_path $HOME/.local/bin $GOPATH/bin $HOME/.local/opt/cmake/bin $HOME/.local/bin/easyeda2kicad
+# ~/.local/bin has nvim, claude (and go/node on Ubuntu), see bootstrap.sh.
+# Machine-specific PATH entries go in config.local.fish (see the bottom of this file).
+fish_add_path $HOME/.local/bin $GOPATH/bin
 
 set -g fish_greeting ""
 

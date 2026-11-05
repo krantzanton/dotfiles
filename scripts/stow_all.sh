@@ -20,7 +20,6 @@ backup_if_exists "$HOME/.config/fish/config.fish"
 backup_if_exists "$HOME/.config/kitty/kitty.conf"
 backup_if_exists "$HOME/.config/tmux/tmux.conf"
 backup_if_exists "$HOME/.tmux.conf"
-backup_if_exists "$HOME/.zshrc"
 backup_if_exists "$HOME/.claude/CLAUDE.md"
 
 # fish and Claude write runtime files (fish_variables, history, credentials) into these
@@ -30,12 +29,9 @@ no_folding=(fish claude)
 
 packages=(
   fish
-  zsh
-  git
   nvim
   tmux
   kitty
-  ghostty
   claude
 )
 

@@ -1,7 +1,7 @@
 # dotfiles
 all my dotfiles (or my attempt at it)
 
-Configs for fish, zsh, kitty, ghostty, tmux, Neovim and Claude Code, symlinked into `$HOME` with
+Configs for fish, kitty, tmux, Neovim and Claude Code, symlinked into `$HOME` with
 [GNU stow](https://www.gnu.org/software/stow/).
 
 **Works on Ubuntu 24.04 LTS** (main target) and Fedora 41+. `bootstrap.sh` detects which
@@ -20,7 +20,9 @@ cd ~/dotfiles
 ### 2. Install everything
 
 ```sh
-./bootstrap.sh
+./bootstrap.sh                       # the basics
+./bootstrap.sh --cpp --graphics      # + C/C++ tools and graphics tools (see options)
+./bootstrap.sh --help                # all options
 ```
 
 It asks for your sudo password once, and is safe to re-run. It:
@@ -34,28 +36,33 @@ It asks for your sudo password once, and is safe to re-run. It:
   `fdfind` → `fd` and `batcat` → `bat`.
 - installs [yazi](https://github.com/sxyazi/yazi) (file manager, `<leader>-` in nvim) and
   [lazygit](https://github.com/jesseduffield/lazygit) (git UI, `<leader>gg` in nvim) into `~/.local/bin`
-- installs **JetBrainsMono Nerd Font** (the font kitty uses; same as Ghostty's built-in default, plus icons)
-  and Cascadia Code NF into `~/.local/share/fonts`
-- installs NVIDIA drivers **only if an NVIDIA GPU is detected** (`ubuntu-drivers install` on
-  Ubuntu, `akmod-nvidia` on Fedora)
+- installs **JetBrainsMono Nerd Font** (the font kitty uses; same as Ghostty's built-in default,
+  plus icons) into `~/.local/share/fonts`
 - installs [Claude Code](https://code.claude.com) (AI coding agent) into `~/.local/bin`
 - makes fish the default shell
 - enables Git LFS, installs the Neovim Python and Node providers
 
-Options:
+Opt-in extras, only installed when you pass the flag:
+
+| flag         | installs |
+|--------------|----------|
+| `--cpp`      | C/C++ toolchain + debuggers: clang, clangd (C/C++ language server in nvim), clang-format, cmake, ninja, gdb, lldb, valgrind |
+| `--graphics` | graphics sanity tools: glxinfo (mesa-utils / mesa-demos), vulkan-tools |
+| `--nvidia`   | NVIDIA drivers + nvidia-smi (`ubuntu-drivers install` on Ubuntu, `akmod-nvidia` on Fedora) |
+| `--ghostty`  | the ghostty terminal (snap on Ubuntu, COPR on Fedora) |
+
+Other options:
 
 | flag           | does |
 |----------------|------|
 | `--no-upgrade` | skip the system upgrade |
 | `--no-chsh`    | keep your current default shell |
-| `--nvidia`     | install NVIDIA drivers even if no GPU is detected |
-| `--no-nvidia`  | never install NVIDIA drivers |
-| `--no-extras`  | skip yazi, lazygit and the fonts |
+| `--no-extras`  | skip yazi, lazygit and the font |
 | `--no-claude`  | don't install Claude Code |
-| `--ghostty`    | also install ghostty (snap on Ubuntu, COPR on Fedora) |
-| `--update`     | reinstall Neovim / yazi / lazygit / fonts from upstream even if present (Go and Node always update to latest) |
+| `--update`     | reinstall Neovim / yazi / lazygit / font from upstream even if present (Go and Node always update to latest) |
 
-To add a package, put it in `APT_PACKAGES` and/or `DNF_PACKAGES` at the top of `bootstrap.sh`.
+To add a package, put it in `APT_PACKAGES` and/or `DNF_PACKAGES` at the top of `bootstrap.sh`
+(or `*_CPP` / `*_GRAPHICS` for the opt-in groups).
 On Ubuntu, packages apt doesn't have are skipped with a warning instead of failing the run
 (e.g. `fastfetch` isn't in 24.04).
 
@@ -64,12 +71,11 @@ On Ubuntu, packages apt doesn't have are skipped with a warning instead of faili
 
 | group          | packages |
 |----------------|----------|
-| shell/terminal | fish, zsh, zsh-autosuggestions, zsh-syntax-highlighting, tmux, kitty, zoxide |
+| shell/terminal | fish, tmux, kitty, zoxide |
 | editor/search  | git, git-lfs, ripgrep, fd, fzf, bat, eza, tree, unzip, zip, 7zip, jq, yq, curl, wget |
-| build          | gcc, g++, clang, clangd, cmake, ninja, make, gdb, lldb, valgrind, pkg-config |
+| build          | gcc, g++, make, pkg-config (more with `--cpp`) |
 | python         | python3, pip, venv, pipx, pynvim |
 | node / go      | upstream on Ubuntu (see above), distro packages on Fedora |
-| graphics       | glxinfo (mesa-utils / mesa-demos), vulkan-tools |
 | utilities      | htop, btop, fastfetch, wl-clipboard, xclip, direnv, stow, shellcheck, notify-send |
 | misc           | sqlite, just |
 
@@ -81,11 +87,11 @@ On Ubuntu, packages apt doesn't have are skipped with a warning instead of faili
 ./scripts/stow_all.sh
 ```
 
-Runs `stow` for each package folder (`fish`, `zsh`, `nvim`, `tmux`, `kitty`, `ghostty`, `claude`) into `$HOME`.
+Runs `stow` for each package folder (`fish`, `nvim`, `tmux`, `kitty`, `claude`) into `$HOME`.
 It also adds the Claude Code hooks from `scripts/claude-settings.json` to `~/.claude/settings.json`
 (merged with `jq`, keeping your existing settings; safe to re-run).
 Existing files that would conflict (`config.fish`, `kitty.conf`, `tmux.conf`, `~/.tmux.conf`,
-`~/.zshrc`) are moved to `<file>.bak` first.
+`~/.claude/CLAUDE.md`) are moved to `<file>.bak` first.
 
 To stow a single package by hand:
 
@@ -114,7 +120,7 @@ The first launch installs everything automatically. Give it a few minutes, then 
   gopls, vtsls, eslint, tailwindcss, emmet, html, cssls, jsonls, lua_ls, bashls,
   prettierd, stylua, goimports, gofumpt, delve, shfmt, shellcheck, tree-sitter-cli
 - Treesitter compiles its parsers once tree-sitter-cli is there (`:TSUpdate`)
-- clangd comes from the system package, not Mason
+- clangd (C/C++) comes from the system package with `--cpp`, not Mason; skipped if missing
 
 Run `:checkhealth` if something looks off.
 
@@ -130,8 +136,8 @@ node --version
 fish --version
 tmux -V
 fc-list | grep -i "JetBrainsMono Nerd" # font kitty uses
-glxinfo | grep "OpenGL renderer"
-nvidia-smi                           # NVIDIA only
+glxinfo | grep "OpenGL renderer"    # with --graphics
+nvidia-smi                           # with --nvidia
 ```
 
 ## Updating
@@ -154,9 +160,7 @@ In nvim: `:lua vim.pack.update()` for plugins (shows what changed; `:w` to apply
 | package  | what                                                               |
 |----------|--------------------------------------------------------------------|
 | fish     | default shell: git prompt, fzf, `z`, abbreviations, `y`, `wt`      |
-| zsh      | alternative shell: no framework, git prompt, fzf, zoxide, autosuggest |
 | kitty    | terminal, oxocarbon, starts inside tmux                             |
-| ghostty  | terminal                                                           |
 | tmux     | prefix `C-a`, oxocarbon status bar, no plugin manager              |
 | nvim     | Neovim 0.12, `vim.pack`, LSP via Mason (Go, TS/React, C/C++, Lua, ...) |
 | claude   | `~/.claude/CLAUDE.md` (personal preferences) + tmux status hook    |

@@ -7,17 +7,22 @@ set -euo pipefail
 # Other Debian/Ubuntu-based distros will probably work but aren't tested.
 #
 # Usage: ./bootstrap.sh [options]
+# Opt-in extras (not installed unless asked for):
+#   --cpp          C/C++ toolchain + debuggers: clang, clangd, cmake, ninja, gdb, lldb, valgrind
+#   --graphics     graphics sanity tools: glxinfo, vulkaninfo
+#   --nvidia       NVIDIA drivers + nvidia-smi
+#   --ghostty      the ghostty terminal
+#
+# Other options:
 #   --no-upgrade   don't upgrade system packages first
 #   --no-chsh      don't make fish the default shell
-#   --nvidia       install NVIDIA drivers/utils even if no NVIDIA GPU is detected
-#   --no-nvidia    never install NVIDIA drivers/utils
-#   --no-extras    skip yazi, lazygit and the fonts (JetBrainsMono Nerd Font, Cascadia Code NF)
+#   --no-extras    skip yazi, lazygit and JetBrainsMono Nerd Font
 #   --no-claude    don't install Claude Code
-#   --ghostty      also install the ghostty terminal
 #   --update       reinstall tools from upstream even if already installed
 #   -h, --help     show this help
 #
-# To add a package: put it in APT_PACKAGES and/or DNF_PACKAGES below.
+# To add a package: put it in APT_PACKAGES and/or DNF_PACKAGES below (or the *_CPP /
+# *_GRAPHICS lists for the opt-in groups).
 # On apt, packages that don't exist are skipped with a warning instead of failing.
 
 # --- Packages ---------------------------------------------------------------
@@ -27,20 +32,17 @@ set -euo pipefail
 # Neovim comes from upstream on Fedora too (the config needs 0.12+).
 APT_PACKAGES=(
   # shell / terminal
-  fish zsh zsh-autosuggestions zsh-syntax-highlighting tmux kitty zoxide ncurses-term
+  fish tmux kitty zoxide ncurses-term
 
   # editor + search + file tools
   git git-lfs ripgrep fd-find fzf bat eza tree unzip zip p7zip-full jq yq
   curl wget ca-certificates tar gzip xz-utils
 
-  # build tools (clangd is the C/C++ language server)
-  build-essential gcc g++ clang clangd clang-format cmake ninja-build make gdb lldb valgrind pkg-config
+  # basic build tools (Neovim compiles treesitter parsers with gcc)
+  build-essential gcc g++ make pkg-config
 
   # Python (python3-pynvim is the Neovim Python provider)
   python3 python3-pip python3-venv pipx python3-pynvim
-
-  # graphics / debug sanity tools
-  mesa-utils vulkan-tools
 
   # utilities
   htop btop fastfetch wl-clipboard xclip direnv stow shellcheck pciutils fontconfig
@@ -53,14 +55,14 @@ APT_PACKAGES=(
 # Fedora
 DNF_PACKAGES=(
   # shell / terminal
-  fish zsh zsh-autosuggestions zsh-syntax-highlighting tmux kitty zoxide
+  fish tmux kitty zoxide
 
   # editor + search + file tools
   git git-lfs ripgrep fd-find fzf bat eza tree unzip zip p7zip jq yq
   curl wget tar gzip xz
 
-  # build tools
-  gcc gcc-c++ clang clang-tools-extra cmake ninja-build make gdb lldb valgrind pkgconf-pkg-config
+  # basic build tools (Neovim compiles treesitter parsers with gcc)
+  gcc gcc-c++ make pkgconf-pkg-config
 
   # Python (python3-neovim is the Neovim Python provider)
   python3 python3-pip python3-virtualenv pipx python3-neovim
@@ -68,38 +70,41 @@ DNF_PACKAGES=(
   # Node.js + Go (Neovim tooling, language servers)
   nodejs npm golang
 
-  # graphics / debug sanity tools
-  mesa-demos vulkan-tools
-
   # utilities
   htop btop fastfetch wl-clipboard xclip direnv stow ShellCheck pciutils fontconfig
   libnotify # notify-send, used by the Claude Code hook
-
-  # fonts / terminal icons
-  cascadia-code-nf-fonts
 
   # misc dev niceties
   sqlite just
 )
 
+# Opt-in groups. clangd is the C/C++ language server Neovim uses when it's installed.
+APT_CPP=(clang clangd clang-format cmake ninja-build gdb lldb valgrind)
+DNF_CPP=(clang clang-tools-extra cmake ninja-build gdb lldb valgrind)
+APT_GRAPHICS=(mesa-utils vulkan-tools)
+DNF_GRAPHICS=(mesa-demos vulkan-tools)
+
 # --- Options ----------------------------------------------------------------
 
 DO_UPGRADE=1
 DO_CHSH=1
-DO_NVIDIA=auto
+WITH_CPP=0
+WITH_GRAPHICS=0
+WITH_NVIDIA=0
 DO_EXTRAS=1
 DO_CLAUDE=1
 WITH_GHOSTTY=0
 FORCE_UPDATE=0
 
-usage() { sed -n '4,19p' "$0" | sed 's/^# \{0,1\}//'; }
+usage() { awk 'NR >= 4 && /^#/ { sub(/^# ?/, ""); print; next } NR > 4 { exit }' "$0"; }
 
 while (($#)); do
   case "$1" in
     --no-upgrade) DO_UPGRADE=0 ;;
     --no-chsh) DO_CHSH=0 ;;
-    --nvidia) DO_NVIDIA=1 ;;
-    --no-nvidia) DO_NVIDIA=0 ;;
+    --cpp) WITH_CPP=1 ;;
+    --graphics) WITH_GRAPHICS=1 ;;
+    --nvidia) WITH_NVIDIA=1 ;;
     --no-extras) DO_EXTRAS=0 ;;
     --no-claude) DO_CLAUDE=0 ;;
     --ghostty) WITH_GHOSTTY=1 ;;
@@ -217,6 +222,23 @@ install_base_packages() {
   esac
 }
 
+install_optional_packages() {
+  if ((WITH_CPP)); then
+    log "Installing C/C++ toolchain + debuggers (--cpp)"
+    case $PKG in
+      apt) apt_install "${APT_CPP[@]}" ;;
+      dnf) dnf_install "${DNF_CPP[@]}" ;;
+    esac
+  fi
+  if ((WITH_GRAPHICS)); then
+    log "Installing graphics tools (--graphics)"
+    case $PKG in
+      apt) apt_install "${APT_GRAPHICS[@]}" ;;
+      dnf) dnf_install "${DNF_GRAPHICS[@]}" ;;
+    esac
+  fi
+}
+
 # Debian ships fd as `fdfind` and bat as `batcat`; give them their usual names.
 link_debian_binary_names() {
   [[ $PKG == apt ]] || return 0
@@ -332,32 +354,11 @@ install_jetbrains_font() {
   fc-cache -f >/dev/null
 }
 
-# Cascadia Code NF (kitty's previous font, kept as an alternative). Fedora has a package;
-# elsewhere grab Microsoft's release.
-install_cascadia_font() {
-  if fc-list | grep -qi 'Cascadia Code NF' && ((!FORCE_UPDATE)); then
-    log "Cascadia Code NF font already installed"
-    return
-  fi
-  log "Installing Cascadia Code NF font into $FONT_DIR"
-  local url
-  url="$(fetch https://api.github.com/repos/microsoft/cascadia-code/releases/latest |
-    jq -r '.assets[] | select(.name | endswith(".zip")) | .browser_download_url' | head -1)"
-  [[ -n $url ]] || { warn "couldn't find the Cascadia Code release; skipping font"; return; }
-  fetch -o "$TMP_DIR/cascadia.zip" "$url"
-  unzip -qo "$TMP_DIR/cascadia.zip" -d "$TMP_DIR/cascadia"
-  mkdir -p "$FONT_DIR/CascadiaCode"
-  find "$TMP_DIR/cascadia" -path '*/ttf/CascadiaCodeNF*.ttf' -not -path '*/static/*' \
-    -exec cp {} "$FONT_DIR/CascadiaCode/" \;
-  fc-cache -f >/dev/null
-}
-
 install_extras() {
   ((DO_EXTRAS)) || return 0
   install_yazi
   install_lazygit
   install_jetbrains_font
-  install_cascadia_font
 }
 
 install_ghostty() {
@@ -397,10 +398,10 @@ install_claude_code() {
 # --- NVIDIA -----------------------------------------------------------------
 
 install_nvidia() {
-  if [[ $DO_NVIDIA == auto ]]; then
-    if lspci 2>/dev/null | grep -qi nvidia; then DO_NVIDIA=1; else DO_NVIDIA=0; fi
+  ((WITH_NVIDIA)) || return 0
+  if ! lspci 2>/dev/null | grep -qi nvidia; then
+    warn "--nvidia given but no NVIDIA GPU detected; installing anyway"
   fi
-  ((DO_NVIDIA)) || return 0
 
   case $PKG in
     apt)
@@ -479,6 +480,7 @@ main() {
   prepare_package_manager
   upgrade_system
   install_base_packages
+  install_optional_packages
   link_debian_binary_names
   install_upstream_tools
   install_extras
