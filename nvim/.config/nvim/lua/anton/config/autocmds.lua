@@ -1,7 +1,7 @@
 local autocmd = vim.api.nvim_create_autocmd
 local group = vim.api.nvim_create_augroup("user_config", { clear = true })
 
--- Format on save is handled by conform.nvim (plugins/format.lua)
+-- Format on save is handled by conform.nvim (plugins/editor.lua)
 
 vim.filetype.add({
   extension = {

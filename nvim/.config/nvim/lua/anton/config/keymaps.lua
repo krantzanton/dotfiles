@@ -1,17 +1,11 @@
-vim.g.mapleader = " "
-vim.g.maplocalleader = " "
+-- Plain Neovim keymaps. Plugin keymaps are in lua/anton/plugins/keymaps.lua.
+-- Ctrl-h/j/k/l window movement: vim-tmux-navigator (plugins/util.lua)
 
 local map = vim.keymap.set
 
 map("n", "<leader>w", "<cmd>write<cr>", { desc = "Write file" })
 map("n", "<leader>q", "<cmd>quit<cr>", { desc = "Quit window" })
 map("n", "<Esc>", "<cmd>nohlsearch<cr>")
-
--- File explorer (netrw is disabled, so use oil)
-map("n", "-", "<cmd>Oil<cr>", { desc = "Open parent directory" })
-map("n", "<leader>e", "<cmd>Oil<cr>", { desc = "File explorer" })
-
--- Ctrl-h/j/k/l window movement lives in plugins/editor.lua (vim-tmux-navigator)
 
 -- Move selected lines up/down
 map("v", "J", ":m '>+1<cr>gv=gv", { desc = "Move selection down", silent = true })

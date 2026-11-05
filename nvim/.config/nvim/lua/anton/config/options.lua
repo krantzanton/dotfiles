@@ -1,6 +1,7 @@
 local opt = vim.opt
 
-opt.cmdheight = 0
+opt.cmdheight = 0 -- command line floats in the middle instead (tiny-cmdline, plugins/ui.lua)
+opt.winborder = "rounded" -- borders on all floating windows (hover, diagnostics, ...)
 opt.number = true
 opt.relativenumber = true
 opt.mouse = "a"
@@ -29,7 +30,14 @@ opt.confirm = true -- ask instead of failing on :q with unsaved changes
 opt.completeopt = { "menu", "menuone", "noselect" }
 opt.list = true
 opt.listchars = { tab = "» ", trail = "·", nbsp = "␣" }
-opt.fillchars = { eob = " " }
+opt.fillchars = { eob = " ", fold = " " }
+
+-- Folding by code structure (treesitter). Files open unfolded; za toggles the fold under
+-- the cursor, zR / zM open / close all. Press z and wait to see the rest.
+opt.foldmethod = "expr"
+opt.foldexpr = "v:lua.vim.treesitter.foldexpr()"
+opt.foldlevel = 99
+opt.foldtext = "" -- folded line keeps its syntax colours
 
 -- Go uses real tabs; show them 4 wide
 vim.api.nvim_create_autocmd("FileType", {

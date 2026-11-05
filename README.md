@@ -28,12 +28,12 @@ It asks for your sudo password once, and is safe to re-run. It:
 - updates package lists, enables `universe` on Ubuntu / RPM Fusion on Fedora
 - upgrades the system
 - installs the base packages (list below)
-- **Ubuntu only:** installs the latest **Neovim**, **Go** and **Node.js LTS** from their
-  official downloads into `~/.local/opt` (linked into `~/.local/bin`). The apt versions are too
-  old: Ubuntu 24.04 ships Neovim 0.9, and this config needs 0.11+. Also links `fdfind` → `fd`
-  and `batcat` → `bat`.
+- installs the latest **Neovim** from the official download into `~/.local/opt/nvim` (linked into
+  `~/.local/bin`) on both distros: the config needs 0.12+, Ubuntu 24.04 ships 0.9 and Fedora 43 0.11
+- **Ubuntu only:** same for **Go** and **Node.js LTS** (apt's are too old). Also links
+  `fdfind` → `fd` and `batcat` → `bat`.
 - installs [yazi](https://github.com/sxyazi/yazi) (file manager, `<leader>-` in nvim) and
-  [lazygit](https://github.com/jesseduffield/lazygit) (git UI, `<leader>lg` in nvim) into `~/.local/bin`
+  [lazygit](https://github.com/jesseduffield/lazygit) (git UI, `<leader>gg` in nvim) into `~/.local/bin`
 - installs the **Cascadia Code NF** font kitty uses (into `~/.local/share/fonts` on Ubuntu)
 - installs NVIDIA drivers **only if an NVIDIA GPU is detected** (`ubuntu-drivers install` on
   Ubuntu, `akmod-nvidia` on Fedora)
@@ -106,13 +106,13 @@ otherwise you'll get the old apt `nvim` (if installed) instead of the new one.
 nvim
 ```
 
-The first launch installs everything automatically. Give it a minute, then restart nvim:
+The first launch installs everything automatically. Give it a few minutes, then restart nvim:
 
-- [lazy.nvim](https://github.com/folke/lazy.nvim) installs the plugins (`:Lazy`)
+- Neovim's built-in plugin manager (`vim.pack`) asks to install the plugins: say yes
 - Mason installs the language servers and tools (`:Mason`):
-  gopls, ts_ls, eslint, tailwindcss, html, cssls, jsonls, lua_ls, bashls,
-  prettierd, stylua, goimports, gofumpt, delve, shfmt
-- Treesitter installs its parsers (`:TSUpdate`)
+  gopls, vtsls, eslint, tailwindcss, emmet, html, cssls, jsonls, lua_ls, bashls,
+  prettierd, stylua, goimports, gofumpt, delve, shfmt, shellcheck, tree-sitter-cli
+- Treesitter compiles its parsers once tree-sitter-cli is there (`:TSUpdate`)
 - clangd comes from the system package, not Mason
 
 Run `:checkhealth` if something looks off.
@@ -123,7 +123,7 @@ GLSL support. It's skipped if it isn't installed.
 ### Check it worked
 
 ```sh
-nvim --version                       # 0.11 or newer
+nvim --version                       # 0.12 or newer
 go version
 node --version
 fish --version
@@ -142,10 +142,11 @@ git pull
 ./scripts/stow_all.sh         # picks up any new files
 ```
 
-On Ubuntu, `./bootstrap.sh --update` also pulls the latest Neovim, yazi and lazygit.
+`./bootstrap.sh --update` also pulls the latest Neovim, yazi and lazygit.
 
-In nvim: `:Lazy sync` for plugins, `:MasonUpdate` for tools, `:TSUpdate` for parsers.
-Plugin versions are pinned in `nvim/.config/nvim/lazy-lock.json`, commit it after updating.
+In nvim: `:lua vim.pack.update()` for plugins (shows what changed; `:w` to apply),
+`:MasonUpdate` for tools, `:TSUpdate` for parsers. Plugin versions are pinned in
+`nvim/.config/nvim/nvim-pack-lock.json`; commit it after updating.
 
 ## What's in here
 
@@ -156,11 +157,23 @@ Plugin versions are pinned in `nvim/.config/nvim/lazy-lock.json`, commit it afte
 | kitty    | terminal, oxocarbon, starts inside tmux                             |
 | ghostty  | terminal                                                           |
 | tmux     | prefix `C-a`, oxocarbon status bar, no plugin manager              |
-| nvim     | lazy.nvim, LSP via Mason (Go, TS/React, C/C++, Lua, ...)           |
+| nvim     | Neovim 0.12, `vim.pack`, LSP via Mason (Go, TS/React, C/C++, Lua, ...) |
 | claude   | `~/.claude/CLAUDE.md` (personal preferences) + tmux status hook    |
 
 Each folder mirrors where its files go under `$HOME`, e.g. `nvim/.config/nvim/init.lua` →
 `~/.config/nvim/init.lua`.
+
+The Neovim config (structure borrowed from [craftzdog's](https://github.com/craftzdog/dotfiles)):
+
+```
+nvim/.config/nvim/
+  init.lua                 loads the rest
+  lua/anton/config/        options, plain keymaps, autocmds
+  lua/anton/plugins/
+    init.lua               the list of every plugin (add / remove plugins here)
+    ui.lua editor.lua treesitter.lua lsp.lua debug.lua util.lua   plugin setup by topic
+    keymaps.lua            every plugin shortcut, each with a description
+```
 
 Kitty opens straight into a tmux session called `main` (a new session if `main` is
 already attached somewhere else). tmux copies to the clipboard with `wl-copy`, so it expects
@@ -208,12 +221,17 @@ wt rm fix-login     # remove it when merged (the branch is kept)
 - `y` yazi (cd on quit), `wt` git worktrees
 - machine-specific settings go in `~/.config/fish/config.local.fish` (not in git)
 
-**nvim** (leader `Space`, press it and wait for which-key)
-- `<leader>f…` find: `ff` files, `fw` grep, `fr` recent, `fs` symbols, `ft` TODOs
-- `gd` / `gr` / `gi` / `gy` / `K` LSP navigation, `<leader>rn` rename, `<leader>ca` code action
-- `<leader>cf` format (also on save; `:FormatToggle`), `<leader>ch` inlay hints
-- `<leader>x…` Trouble diagnostics list, `]d` / `[d` next/prev diagnostic
-- `<leader>g…` git hunks, `]h` / `[h` next/prev hunk, `<leader>lg` lazygit
+**nvim** (leader `Space`). Don't memorise this: press `Space` and wait for the menu, or
+`Space ?` to search every shortcut. The start screen lists the common ones too.
+- `<leader>f…` find: `ff` files, `fw` grep, `fr` recent, `<leader><leader>` buffers, `f.` resume,
+  `fs` symbols, `ft` TODOs, `fd` diagnostics, `fn` nvim config
+- `gd` / `gr` / `gi` / `gy` / `K` LSP navigation; `<leader>c…` code: `ca` action, `cr` rename,
+  `cf` format, `cd` line diagnostics
+- `<leader>u…` toggles: `uf` format on save, `uh` inlay hints, `uw` wrap, `ud` diagnostics
+- `<leader>g…` git: `gg` lazygit, `gs` / `gr` stage / reset hunk, `gp` preview, `gb` blame;
+  `]h` / `[h` next/prev hunk
+- `<leader>x…` Trouble lists, `]d` / `[d` next/prev diagnostic
 - `<leader>db` breakpoint, `F5` debug, `<leader>dt` debug Go test
-- `-` oil file explorer, `<leader>-` yazi
+- `-` oil file explorer, `<leader>e` oil float, `<leader>-` yazi
+- completion: `Enter` accept, `Tab` / `S-Tab` move, `C-Space` open
 - `sa` / `sd` / `sr` add/delete/replace surroundings

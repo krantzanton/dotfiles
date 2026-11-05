@@ -24,6 +24,7 @@ set -euo pipefail
 
 # Ubuntu / Debian. neovim, go and node are NOT here on purpose: the apt versions
 # are too old for this config, so they come from upstream (see install_upstream_*).
+# Neovim comes from upstream on Fedora too (the config needs 0.12+).
 APT_PACKAGES=(
   # shell / terminal
   fish zsh zsh-autosuggestions zsh-syntax-highlighting tmux kitty zoxide ncurses-term
@@ -55,7 +56,7 @@ DNF_PACKAGES=(
   fish zsh zsh-autosuggestions zsh-syntax-highlighting tmux kitty zoxide
 
   # editor + search + file tools
-  neovim git git-lfs ripgrep fd-find fzf bat eza tree unzip zip p7zip jq yq
+  git git-lfs ripgrep fd-find fzf bat eza tree unzip zip p7zip jq yq
   curl wget tar gzip xz
 
   # build tools
@@ -226,7 +227,7 @@ link_debian_binary_names() {
 
 # --- Upstream tools (apt versions are too old) -------------------------------
 
-# Neovim: this config needs 0.11+, Ubuntu 24.04 ships 0.9.
+# Neovim: this config needs 0.12+ (built-in vim.pack). Ubuntu 24.04 ships 0.9, Fedora 43 0.11.
 install_upstream_neovim() {
   local dest="$LOCAL_OPT/nvim"
   if [[ -x $dest/bin/nvim ]] && ((!FORCE_UPDATE)); then
@@ -279,8 +280,8 @@ install_upstream_node() {
 }
 
 install_upstream_tools() {
-  [[ $PKG == apt ]] || return 0 # Fedora's packages are new enough
   install_upstream_neovim
+  [[ $PKG == apt ]] || return 0 # Fedora's Go and Node are new enough
   install_upstream_go
   install_upstream_node
 }
@@ -445,7 +446,7 @@ Next steps:
   4. claude                    log in once; then <prefix> a in tmux opens it beside nvim
 
 Quick checks:
-  nvim --version     (should be 0.11 or newer)
+  nvim --version     (should be 0.12 or newer)
   go version
   node --version
   claude --version
